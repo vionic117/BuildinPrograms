@@ -1,0 +1,49 @@
+def findCrossoverIndexHelper(x, y, left, right):
+    #Assertions for invariants
+    assert(len(x) == len(y))
+    assert(left >= 0)
+    assert (left <= right) #assert(left <= right-1)
+    assert(right < len(x))
+    # Here is the key property we would like to maintain.
+    assert (x[left] >= y[left]) 
+    assert(x[left] > y[left])
+    assert(x[right] < y[right])
+    n1 = len(x)
+    # Calculate the midpoint of the current search range
+    #mid = (left + right) // 2
+
+    # Check if crossover occurs at mid
+    '''if x[mid] <= y[mid]:
+        # If this is the first position or the previous element is not a crossover, return mid
+        if mid == 0 or x[mid - 1] > y[mid - 1]:
+            #mid = mid - 1
+            return mid
+        else:
+            # Continue searching to the left
+            return findCrossoverIndexHelper(x, y, left, mid - 1)
+        
+    else:
+        # The crossover must be to the right
+        return findCrossoverIndexHelper(x, y, mid + 1, right)'''
+    
+    
+def findCrossoverIndexHelper(x, y, left, right):
+    # Assertions for invariants
+    assert(len(x) == len(y))
+    assert(left >= 0)
+    assert(left <= right)
+    assert(right < len(x))
+    assert(x[left] > y[left])
+    assert(x[right] < y[right])
+
+    mid = (left + right) // 2
+
+    # If crossover is between mid and mid+1
+    if x[mid] > y[mid] and x[mid + 1] <= y[mid + 1]:
+        return mid
+    elif x[mid] <= y[mid]:
+        # Crossover is to the left
+        return findCrossoverIndexHelper(x, y, left, mid - 1)
+    else:
+        # Crossover is to the right
+        return findCrossoverIndexHelper(x, y, mid + 1, right)
