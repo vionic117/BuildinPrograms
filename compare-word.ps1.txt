@@ -1,0 +1,68 @@
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+function Get-WordText($path) {
+    $word = New-Object -ComObject Word.Application
+    $word.Visible = $false
+    $doc = $word.Documents.Open($path)
+    $text = $doc.Content.Text
+    $doc.Close()
+    $word.Quit()
+    return $text
+}
+
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Word Document Compare Tool"
+$form.Size = New-Object System.Drawing.Size(900,700)
+
+$btnCompare = New-Object System.Windows.Forms.Button
+$btnCompare.Text = "Select and Compare Documents"
+$btnCompare.Width = 250
+$btnCompare.Height = 40
+$btnCompare.Top = 10
+$btnCompare.Left = 10
+
+$output = New-Object System.Windows.Forms.TextBox
+$output.Multiline = $true
+$output.ScrollBars = "Vertical"
+$output.Width = 850
+$output.Height = 600
+$output.Left = 10
+$output.Top = 60
+$output.Font = "Consolas"
+
+$form.Controls.Add($btnCompare)
+$form.Controls.Add($output)
+
+$btnCompare.Add_Click({
+
+    $fileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $fileDialog.Filter = "Word Documents (*.docx)|*.docx"
+
+    $fileDialog.Title = "Select First Document"
+    if ($fileDialog.ShowDialog() -ne "OK") { return }
+    $file1 = $fileDialog.FileName
+
+    $fileDialog.Title = "Select Second Document"
+    if ($fileDialog.ShowDialog() -ne "OK") { return }
+    $file2 = $fileDialog.FileName
+
+    $text1 = Get-WordText $file1
+    $text2 = Get-WordText $file2
+
+    $diff = Compare-Object ($text1 -split "`n") ($text2 -split "`n")
+
+    $output.Clear()
+
+    foreach ($line in $diff) {
+        if ($line.SideIndicator -eq "<=") {
+            $output.AppendText("Removed: " + $line.InputObject + "`r`n")
+        }
+        elseif ($line.SideIndicator -eq "=>") {
+            $output.AppendText("Added: " + $line.InputObject + "`r`n")
+        }
+    }
+
+})
+
+$form.ShowDialog()
