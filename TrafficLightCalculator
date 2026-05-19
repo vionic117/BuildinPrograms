@@ -1,0 +1,115 @@
+
+#strings.xml:
+<resources>
+    <string name="app_name">GreenLight Timer</string>
+    <string name="google_maps_key">YOUR_API_KEY_HERE</string>
+</resources
+
+#activity_main.xml:
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <EditText
+        android:id="@+id/startLocation"
+        android:hint="Start Location"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+        
+    <EditText
+        android:id="@+id/destinationLocation"
+        android:hint="Stoplight Location"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+        
+    <Button
+        android:id="@+id/calculateButton"
+        android:text="Calculate Departure Time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+        
+    <TextView
+        android:id="@+id/resultText"
+        android:text=""
+        android:textSize="18sp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="16dp"/>
+</LinearLayout>
+
+
+import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import okhttp3.*
+import org.json.JSONObject
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
+
+class MainActivity : AppCompatActivity() {
+
+    private val apiKey = getString(R.string.google_maps_key)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        val startLocation = findViewById<EditText>(R.id.startLocation)
+        val destinationLocation = findViewById<EditText>(R.id.destinationLocation)
+        val calculateButton = findViewById<Button>(R.id.calculateButton)
+        val resultText = findViewById<TextView>(R.id.resultText)
+
+        calculateButton.setOnClickListener {
+            val start = startLocation.text.toString()
+            val end = destinationLocation.text.toString()
+            getTravelTime(start, end) { durationSeconds ->
+                runOnUiThread {
+                    if (durationSeconds != null) {
+                        val now = Calendar.getInstance()
+                        now.add(Calendar.SECOND, durationSeconds)
+                        val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                        val departureTime = sdf.format(now.time)
+                        resultText.text = "Leave by: $departureTime to arrive when the light turns green."
+                    } else {
+                        resultText.text = "Error fetching travel time."
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getTravelTime(start: String, end: String, callback: (Int?) -> Unit) {
+        val url = "https://maps.googleapis.com/maps/api/directions/json" +
+                "?origin=${start}&destination=${end}&key=$apiKey"
+
+        val request = Request.Builder().url(url).build()
+        val client = OkHttpClient()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.body?.string()?.let { body ->
+                    val json = JSONObject(body)
+                    val routes = json.getJSONArray("routes")
+                    if (routes.length() > 0) {
+                        val legs = routes.getJSONObject(0).getJSONArray("legs")
+                        if (legs.length() > 0) {
+                            val duration = legs.getJSONObject(0).getJSONObject("duration").getInt("value")
+                            callback(duration)
+                            return
+                        }
+                    }
+                    callback(null)
+                }
+            }
+        })
+    }
+}
