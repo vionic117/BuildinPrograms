@@ -11,16 +11,46 @@ function Get-WordText($path) {
     return $text
 }
 
+function Get-TextFileContent($path) {
+    return Get-Content -Path $path -Raw
+}
+
+function Get-CSVContent($path) {
+    # Read CSV and convert to a list of strings for comparison
+    $csv = Import-Csv -Path $path
+    return $csv | Out-String
+}
+
+# Function to get file content based on selected type
+function Get-FileContent($path, $type) {
+    switch ($type) {
+        "Word Document" { return Get-WordText $path }
+        "Text File" { return Get-TextFileContent $path }
+        "CSV File" { return Get-CSVContent $path }
+        default { return Get-TextFileContent $path }
+    }
+}
+
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "Word Document Compare Tool"
+$form.Text = "File Comparison Tool"
 $form.Size = New-Object System.Drawing.Size(900,700)
 
+# File type selection combo box
+$comboFileType = New-Object System.Windows.Forms.ComboBox
+$comboFileType.Left = 10
+$comboFileType.Top = 10
+$comboFileType.Width = 150
+$comboFileType.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+$comboFileType.Items.AddRange(@("Word Document", "Text File", "CSV File"))
+$comboFileType.SelectedIndex = 0
+$form.Controls.Add($comboFileType)
+
 $btnCompare = New-Object System.Windows.Forms.Button
-$btnCompare.Text = "Select and Compare Documents"
+$btnCompare.Text = "Select and Compare Files"
 $btnCompare.Width = 250
 $btnCompare.Height = 40
 $btnCompare.Top = 10
-$btnCompare.Left = 10
+$btnCompare.Left = 170
 
 $output = New-Object System.Windows.Forms.TextBox
 $output.Multiline = $true
@@ -35,34 +65,55 @@ $form.Controls.Add($btnCompare)
 $form.Controls.Add($output)
 
 $btnCompare.Add_Click({
-
     $fileDialog = New-Object System.Windows.Forms.OpenFileDialog
-    $fileDialog.Filter = "Word Documents (*.docx)|*.docx"
+    $fileDialog.Filter = switch ($comboFileType.SelectedItem) {
+        "Word Document" { "Word Documents (*.docx)|*.docx" }
+        "Text File" { "Text Files (*.txt)|*.txt" }
+        "CSV File" { "CSV Files (*.csv)|*.csv" }
+        default { "All Files (*.*)|*.*" }
+    }
 
-    $fileDialog.Title = "Select First Document"
+    # Select first file
+    $fileDialog.Title = "Select First File"
     if ($fileDialog.ShowDialog() -ne "OK") { return }
     $file1 = $fileDialog.FileName
 
-    $fileDialog.Title = "Select Second Document"
+    # Select second file
+    $fileDialog.Title = "Select Second File"
     if ($fileDialog.ShowDialog() -ne "OK") { return }
     $file2 = $fileDialog.FileName
 
-    $text1 = Get-WordText $file1
-    $text2 = Get-WordText $file2
+    # Determine file type
+    $fileType = $comboFileType.SelectedItem
 
-    $diff = Compare-Object ($text1 -split "`n") ($text2 -split "`n")
+    # Get contents
+    try {
+        $text1 = Get-FileContent $file1 $fileType
+        $text2 = Get-FileContent $file2 $fileType
+    } catch {
+        $output.Text = "Error reading files: $_"
+        return
+    }
+
+    # Compare line by line
+    $lines1 = $text1 -split "`r?`n"
+    $lines2 = $text2 -split "`r?`n"
+
+    $diff = Compare-Object -ReferenceObject $lines1 -DifferenceObject $lines2 -SyncWindow 0
 
     $output.Clear()
 
-    foreach ($line in $diff) {
-        if ($line.SideIndicator -eq "<=") {
-            $output.AppendText("Removed: " + $line.InputObject + "`r`n")
-        }
-        elseif ($line.SideIndicator -eq "=>") {
-            $output.AppendText("Added: " + $line.InputObject + "`r`n")
+    if ($diff.Count -eq 0) {
+        $output.Text = "No changes detected."
+    } else {
+        foreach ($line in $diff) {
+            if ($line.SideIndicator -eq "<=") {
+                $output.AppendText("Removed: $($line.InputObject)`r`n")
+            } elseif ($line.SideIndicator -eq "=>") {
+                $output.AppendText("Added: $($line.InputObject)`r`n")
+            }
         }
     }
-
 })
 
 $form.ShowDialog()
