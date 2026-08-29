@@ -1,0 +1,58 @@
+
+#Python 3
+
+import sympy as sp
+
+def calculus_calculator():
+    print("Calculus & Geometry Solver")
+    print("Choose an option:")
+    print("1. Derivative")
+    print("2. Integral")
+    print("3. Equation of a line")
+    print("4. Equation of a circle")
+    print("5. Intersection points")
+    choice = input("Enter your choice (1-5): ")
+
+    if choice == '1':
+        expr = input("Enter the function to differentiate (in terms of x): ")
+        x = sp.symbols('x')
+        f = sp.sympify(expr)
+        derivative = sp.diff(f, x)
+        print(f"Derivative of {expr} with respect to x is: {derivative}")
+
+    elif choice == '2':
+        expr = input("Enter the function to integrate (in terms of x): ")
+        x = sp.symbols('x')
+        f = sp.sympify(expr)
+        integral = sp.integrate(f, x)
+        print(f"Indefinite integral of {expr} with respect to x is: {integral} + C")
+
+    elif choice == '3':
+        print("Enter two points on the line (x1, y1) and (x2, y2):")
+        x1, y1 = map(float, input("x1 y1: ").split())
+        x2, y2 = map(float, input("x2 y2: ").split())
+        if x2 - x1 == 0:
+            print("The line is vertical: x = {}".format(x1))
+        else:
+            slope = (y2 - y1) / (x2 - x1)
+            intercept = y1 - slope * x1
+            print(f"Line equation: y = {slope}*x + {intercept}")
+
+    elif choice == '4':
+        print("Enter center coordinates and radius of the circle:")
+        h, k, r = map(float, input("h k r: ").split())
+        print(f"Equation of the circle: (x - {h})^2 + (y - {k})^2 = {r}^2")
+
+    elif choice == '5':
+        print("Enter two equations to find their intersection points:")
+        eq1 = input("Equation 1 (in terms of x and y): ")
+        eq2 = input("Equation 2 (in terms of x and y): ")
+        x, y = sp.symbols('x y')
+        sol = sp.solve([sp.sympify(eq1), sp.sympify(eq2)], (x, y))
+        print(f"Intersection points: {sol}")
+
+    else:
+        print("Invalid choice.")
+
+if __name__ == "__main__":
+    calculus_calculator()
