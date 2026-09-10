@@ -1,0 +1,49 @@
+import openai
+import re
+
+# Set your OpenAI API key
+openai.api_key = 'YOUR_API_KEY_HERE'  # Replace with your actual API key
+
+def ask_user(prompt):
+    return input(prompt)
+
+def generate_code(prompt):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # or another model you prefer
+        messages=[
+            {"role": "system", "content": "You are an assistant that generates Python functions based on user descriptions."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0
+    )
+    return response.choices[0].message.content.strip()
+
+def parse_code(response):
+    # Use regex to extract code block
+    code_pattern = r"```(?:python)?\n(.*?)```"
+    match = re.search(code_pattern, response, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    else:
+        # If no code block, assume entire response is code
+        return response
+
+def main():
+    # Step 1: Ask user for the function description
+    user_description = ask_user("What kind of Python function do you want to create? ")
+
+    # Step 2: Generate the function code
+    prompt = f"Write a Python function based on the following description:\n{user_description}\nProvide only the code inside a code block."
+    response = generate_code(prompt)
+
+    # Step 3: Store the response
+    print("\nGenerated Response:\n")
+    print(response)
+
+    # Step 4: Parse the response to extract code
+    code = parse_code(response)
+    print("\nExtracted Python Function:\n")
+    print(code)
+
+if __name__ == "__main__":
+    main()
